@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM | WP Mídias</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Barlow Condensed + Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- SortableJS para drag & drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-black': '#0D0D0D',
+            'brand-orange': '#D95032',
+            'brand-white': '#F2F2F2',
+            'brand-dark': '#1A1A1A',
+            'brand-gray': '#2A2A2A',
+          },
+          fontFamily: {
+            'headline': ['Barlow Condensed', 'sans-serif'],
+            'body': ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0D0D0D; color: #F2F2F2; }
+    .font-headline { font-family: 'Barlow Condensed', sans-serif; }
+
+    /* Scrollbar custom */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1A1A1A; }
+    ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    /* Kanban */
+    .kanban-column { min-width: 280px; max-width: 320px; }
+    .kanban-card { transition: transform 0.15s, box-shadow 0.15s; cursor: grab; }
+    .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+    .kanban-card.sortable-ghost { opacity: 0.4; }
+    .kanban-card.sortable-drag { transform: rotate(2deg); }
+
+    /* Settings list items */
+    .setting-item { transition: background 0.15s; }
+    .setting-item:hover { background: #2A2A2A; }
+    .setting-item.sortable-ghost { opacity: 0.4; background: #2A2A2A; }
+
+    /* Modal */
+    .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+
+    /* Tab active */
+    .tab-active { border-bottom: 2px solid #D95032; color: #F2F2F2; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #888; }
+    .tab-inactive:hover { color: #bbb; }
+
+    /* Settings sub-tab */
+    .stab-active { background: #D95032; color: white; }
+    .stab-inactive { background: #2A2A2A; color: #999; }
+    .stab-inactive:hover { background: #333; color: #ccc; }
+
+    /* Inputs */
+    .crm-input {
+      background: #1A1A1A; border: 1px solid #2A2A2A; color: #F2F2F2;
+      border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 100%;
+      transition: border-color 0.2s;
+    }
+    .crm-input:focus { outline: none; border-color: #D95032; }
+    .crm-select {
+      background: #1A1A1A; border: 1px solid #2A2A2A; color: #F2F2F2;
+      border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 100%;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+    .crm-select:focus { outline: none; border-color: #D95032; }
+    .crm-textarea {
+      background: #1A1A1A; border: 1px solid #2A2A2A; color: #F2F2F2;
+      border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 100%;
+      resize: vertical; min-height: 80px;
+    }
+    .crm-textarea:focus { outline: none; border-color: #D95032; }
+
+    /* Buttons */
+    .btn-primary {
+      background: #D95032; color: white; font-weight: 600;
+      padding: 8px 20px; border-radius: 8px; font-size: 14px;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary {
+      background: #2A2A2A; color: #ccc; font-weight: 500;
+      padding: 8px 16px; border-radius: 8px; font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #333; }
+    .btn-danger {
+      background: transparent; color: #EF4444; font-weight: 500;
+      padding: 4px 8px; border-radius: 6px; font-size: 13px;
+      transition: background 0.2s;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.1); }
+    .btn-success {
+      background: #10B981; color: white; font-weight: 600;
+      padding: 8px 16px; border-radius: 8px; font-size: 14px;
+    }
+
+    /* Color picker wrapper */
+    .color-pick { width: 32px; height: 32px; border-radius: 6px; border: 2px solid #2A2A2A; cursor: pointer; padding: 0; overflow: hidden; }
+    .color-pick input[type=color] { width: 48px; height: 48px; border: none; padding: 0; margin: -8px; cursor: pointer; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 40px; height: 22px; background: #2A2A2A; border-radius: 11px; cursor: pointer; transition: background 0.2s; }
+    .toggle.active { background: #D95032; }
+    .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    .toggle.active::after { transform: translateX(18px); }
+
+    /* Badge / Tag pill */
+    .tag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+    /* Drag handle */
+    .drag-handle { cursor: grab; color: #555; }
+    .drag-handle:hover { color: #888; }
+
+    /* Confirm dialog */
+    .confirm-overlay { background: rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body class="antialiased min-h-screen">
+
+  <!-- ============================================= -->
+  <!-- TELA DE LOGIN                                 -->
+  <!-- ============================================= -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <h1 class="font-headline font-extrabold text-3xl uppercase tracking-tight">CRM <span class="text-brand-orange">WP MÍDIAS</span></h1>
+        <p class="text-gray-500 text-sm mt-2">Painel de gestão de leads</p>
+      </div>
+      <div class="bg-brand-dark border border-brand-gray rounded-xl p-6">
+        <label class="block text-sm text-gray-400 mb-2">Senha de acesso</label>
+        <input type="password" id="loginPassword" class="crm-input mb-4" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') doLogin()">
+        <button onclick="doLogin()" class="btn-primary w-full">Entrar</button>
+        <p id="loginError" class="text-red-400 text-sm mt-3 text-center hidden">Senha incorreta.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- APP PRINCIPAL (hidden until login)            -->
+  <!-- ============================================= -->
+  <div id="appMain" class="hidden flex flex-col h-screen">
+
+    <!-- TOP BAR -->
+    <header class="flex items-center justify-between px-6 py-3 border-b border-brand-gray bg-brand-dark shrink-0">
+      <div class="flex items-center gap-4">
+        <h1 class="font-headline font-extrabold text-xl uppercase tracking-tight">CRM <span class="text-brand-orange">WP</span></h1>
+        <nav class="flex gap-1 ml-6">
+          <button onclick="switchTab('kanban')" id="tabKanban" class="px-4 py-2 text-sm font-semibold tab-active transition-colors">Kanban</button>
+          <button onclick="switchTab('settings')" id="tabSettings" class="px-4 py-2 text-sm font-semibold tab-inactive transition-colors">Configurações</button>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="leadCount" class="text-gray-500 text-xs"></span>
+        <button onclick="logout()" class="text-gray-500 hover:text-gray-300 text-sm">Sair</button>
+      </div>
+    </header>
+
+    <!-- CONTEÚDO DAS ABAS -->
+    <main class="flex-1 overflow-hidden">
+
+      <!-- =============================== -->
+      <!-- ABA KANBAN                      -->
+      <!-- =============================== -->
+      <div id="viewKanban" class="h-full flex flex-col">
+        <!-- Filtros / busca -->
+        <div class="px-6 py-3 flex items-center gap-3 border-b border-brand-gray shrink-0">
+          <div class="relative flex-1 max-w-xs">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="searchInput" class="crm-input pl-9 text-sm" placeholder="Buscar lead..." oninput="filterLeads()">
+          </div>
+          <select id="filterTag" class="crm-select text-sm w-auto" style="width:auto;min-width:140px" onchange="filterLeads()">
+            <option value="">Todas as tags</option>
+          </select>
+          <select id="filterSource" class="crm-select text-sm w-auto" style="width:auto;min-width:140px" onchange="filterLeads()">
+            <option value="">Todas as origens</option>
+          </select>
+        </div>
+
+        <!-- Kanban board -->
+        <div id="kanbanBoard" class="flex-1 overflow-x-auto overflow-y-hidden px-4 py-4">
+          <div id="kanbanColumns" class="flex gap-4 h-full items-start">
+            <!-- Colunas geradas por JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- =============================== -->
+      <!-- ABA CONFIGURAÇÕES               -->
+      <!-- =============================== -->
+      <div id="viewSettings" class="h-full overflow-y-auto hidden">
+        <div class="max-w-3xl mx-auto px-6 py-8">
+          <h2 class="font-headline font-extrabold text-2xl uppercase tracking-tight mb-6">Configurações</h2>
+
+          <!-- Sub-tabs -->
+          <div class="flex flex-wrap gap-2 mb-8">
+            <button onclick="switchSettingsTab('cols')" data-stab="cols" class="px-4 py-2 rounded-lg text-sm font-semibold stab-active transition-colors">Colunas do Kanban</button>
+            <button onclick="switchSettingsTab('fields')" data-stab="fields" class="px-4 py-2 rounded-lg text-sm font-semibold stab-inactive transition-colors">Campos Customizados</button>
+            <button onclick="switchSettingsTab('tags')" data-stab="tags" class="px-4 py-2 rounded-lg text-sm font-semibold stab-inactive transition-colors">Etiquetas</button>
+            <button onclick="switchSettingsTab('sources')" data-stab="sources" class="px-4 py-2 rounded-lg text-sm font-semibold stab-inactive transition-colors">Origens</button>
+            <button onclick="switchSettingsTab('password')" data-stab="password" class="px-4 py-2 rounded-lg text-sm font-semibold stab-inactive transition-colors">Senha</button>
+          </div>
+
+          <!-- SEÇÃO: Colunas do Kanban -->
+          <div id="settingsCols" class="settings-panel">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-gray-400 text-sm">Arraste para reordenar. Alterações salvas automaticamente.</p>
+              <button onclick="addColumn()" class="btn-primary text-sm">+ Adicionar coluna</button>
+            </div>
+            <div id="colsList" class="space-y-2">
+              <!-- Gerado por JS -->
+            </div>
+          </div>
+
+          <!-- SEÇÃO: Campos Customizados -->
+          <div id="settingsFields" class="settings-panel hidden">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-gray-400 text-sm">Campos adicionais que aparecem no modal do lead.</p>
+              <button onclick="addCustomField()" class="btn-primary text-sm">+ Adicionar campo</button>
+            </div>
+            <div id="fieldsList" class="space-y-2">
+              <!-- Gerado por JS -->
+            </div>
+          </div>
+
+          <!-- SEÇÃO: Etiquetas / Tags -->
+          <div id="settingsTags" class="settings-panel hidden">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-gray-400 text-sm">Etiquetas disponíveis para classificar leads.</p>
+              <button onclick="addTag()" class="btn-primary text-sm">+ Adicionar etiqueta</button>
+            </div>
+            <div id="tagsList" class="space-y-2">
+              <!-- Gerado por JS -->
+            </div>
+          </div>
+
+          <!-- SEÇÃO: Origens -->
+          <div id="settingsSources" class="settings-panel hidden">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-gray-400 text-sm">De onde os leads chegam.</p>
+              <button onclick="addSource()" class="btn-primary text-sm">+ Adicionar origem</button>
+            </div>
+            <div id="sourcesList" class="space-y-2">
+              <!-- Gerado por JS -->
+            </div>
+          </div>
+
+          <!-- SEÇÃO: Senha -->
+          <div id="settingsPassword" class="settings-panel hidden">
+            <div class="bg-brand-dark border border-brand-gray rounded-xl p-6 max-w-md">
+              <label class="block text-sm text-gray-400 mb-2">Nova senha</label>
+              <input type="password" id="newPassword" class="crm-input mb-3" placeholder="Nova senha">
+              <label class="block text-sm text-gray-400 mb-2">Confirmar nova senha</label>
+              <input type="password" id="confirmPassword" class="crm-input mb-4" placeholder="Confirmar">
+              <button onclick="changePassword()" class="btn-primary">Alterar senha</button>
+              <p id="pwMsg" class="text-sm mt-3 hidden"></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- MODAL DO LEAD                                 -->
+  <!-- ============================================= -->
+  <div id="leadModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="closeLeadModal()"></div>
+    <div class="relative z-10 flex items-start justify-center pt-8 pb-8 px-4 min-h-screen">
+      <div class="bg-brand-dark border border-brand-gray rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+        <!-- Header do modal -->
+        <div class="sticky top-0 bg-brand-dark border-b border-brand-gray px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+          <h3 class="font-headline font-extrabold text-lg uppercase tracking-tight">Detalhes do Lead</h3>
+          <div class="flex items-center gap-2">
+            <a id="modalWhatsApp" href="#" target="_blank" class="btn-success text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+            <button onclick="closeLeadModal()" class="text-gray-500 hover:text-white p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="px-6 py-5 space-y-6" id="modalBody">
+
+          <!-- Campos fixos -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Nome</label>
+              <input type="text" id="m_nome" class="crm-input">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Sobrenome</label>
+              <input type="text" id="m_sobrenome" class="crm-input">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Email</label>
+              <input type="email" id="m_email" class="crm-input">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">WhatsApp</label>
+              <input type="text" id="m_telefone" class="crm-input">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Instagram</label>
+              <input type="text" id="m_instagram" class="crm-input">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Origem</label>
+              <select id="m_source" class="crm-select"></select>
+            </div>
+          </div>
+
+          <!-- Qualificação -->
+          <div>
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Qualificação</h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Vendas/mês</label>
+                <input type="text" id="m_vendas" class="crm-input" readonly style="opacity:0.7">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Margem média</label>
+                <input type="text" id="m_margem" class="crm-input" readonly style="opacity:0.7">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Equipe</label>
+                <input type="text" id="m_socios" class="crm-input" readonly style="opacity:0.7">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Urgência</label>
+                <input type="text" id="m_urgencia" class="crm-input" readonly style="opacity:0.7">
+              </div>
+            </div>
+            <div class="mt-3">
+              <label class="block text-xs text-gray-500 mb-1">Desafio principal</label>
+              <input type="text" id="m_desafio" class="crm-input" readonly style="opacity:0.7">
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Etiquetas</h4>
+            <div id="modalTags" class="flex flex-wrap gap-2">
+              <!-- Gerado por JS -->
+            </div>
+          </div>
+
+          <!-- Campos customizados -->
+          <div id="modalCustomFields">
+            <!-- Gerado por JS se houver campos -->
+          </div>
+
+          <!-- Notas -->
+          <div>
+            <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Notas</h4>
+            <textarea id="m_notes" class="crm-textarea" placeholder="Anotações sobre o lead..."></textarea>
+          </div>
+
+        </div>
+
+        <!-- Footer do modal -->
+        <div class="sticky bottom-0 bg-brand-dark border-t border-brand-gray px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+          <button onclick="closeLeadModal()" class="btn-secondary">Cancelar</button>
+          <button onclick="saveLeadModal()" class="btn-primary">Salvar</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- CONFIRM DIALOG                                -->
+  <!-- ============================================= -->
+  <div id="confirmDialog" class="fixed inset-0 z-[60] hidden">
+    <div class="confirm-overlay absolute inset-0" onclick="cancelConfirm()"></div>
+    <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+      <div class="bg-brand-dark border border-brand-gray rounded-xl p-6 max-w-sm w-full">
+        <p id="confirmMsg" class="text-sm text-gray-300 mb-6"></p>
+        <div class="flex justify-end gap-3">
+          <button onclick="cancelConfirm()" class="btn-secondary text-sm">Cancelar</button>
+          <button onclick="doConfirm()" class="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-red-500">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- TOAST                                         -->
+  <!-- ============================================= -->
+  <div id="toast" class="fixed bottom-6 right-6 z-[70] hidden">
+    <div class="bg-brand-gray border border-brand-gray rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
+      <span id="toastIcon"></span>
+      <span id="toastMsg" class="text-sm"></span>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- JAVASCRIPT                                    -->
+  <!-- ============================================= -->
+  <script>
+    // ─── CONFIG ───────────────────────────────────
+    const SUPABASE_URL = 'https://pizzskaildukehspupzn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpenpza2FpbGR1a2Voc3B1cHpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MTQyMzcsImV4cCI6MjA5MDM5MDIzN30.vc6IqNu_B53PcmnEeciIlfxN_-wpdNuhXjmjPC-8MvU';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ─── STATE ────────────────────────────────────
+    let columns = [];
+    let leads = [];
+    let allTags = [];
+    let allSources = [];
+    let customFields = [];
+    let leadTagsMap = {};   // { lead_id: [tag_id, ...] }
+    let leadCustomValues = {}; // { lead_id: { field_id: value } }
+    let currentLeadId = null;
+    let confirmCallback = null;
+    let sortableInstances = [];
+
+    // ─── AUTH ─────────────────────────────────────
+    async function hashPassword(pw) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    async function doLogin() {
+      const pw = document.getElementById('loginPassword').value;
+      if (!pw) return;
+      const hash = await hashPassword(pw);
+      const { data } = await sb.from('crm_settings').select('value').eq('key','password_hash').single();
+      if (data && data.value === hash) {
+        sessionStorage.setItem('crm_auth','1');
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appMain').classList.remove('hidden');
+        await loadAll();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('crm_auth');
+      location.reload();
+    }
+
+    // Check session on load
+    (async function() {
+      if (sessionStorage.getItem('crm_auth') === '1') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appMain').classList.remove('hidden');
+        await loadAll();
+      }
+    })();
+
+    // ─── DATA LOADING ─────────────────────────────
+    async function loadAll() {
+      await Promise.all([loadColumns(), loadTags(), loadSources(), loadCustomFields()]);
+      await loadLeads();
+      renderKanban();
+      renderFilterOptions();
+    }
+
+    async function loadColumns() {
+      const { data } = await sb.from('kanban_columns').select('*').order('position');
+      columns = data || [];
+    }
+
+    async function loadLeads() {
+      const { data } = await sb.from('leads').select('*').order('created_at', { ascending: false });
+      leads = data || [];
+      // Assign unassigned leads to first column
+      if (columns.length > 0) {
+        const firstCol = columns[0].id;
+        for (const lead of leads) {
+          if (!lead.column_id) {
+            lead.column_id = firstCol;
+            sb.from('leads').update({ column_id: firstCol }).eq('id', lead.id).then(() => {});
+          }
+        }
+      }
+      // Load lead tags
+      const { data: ltData } = await sb.from('lead_tags').select('*');
+      leadTagsMap = {};
+      (ltData || []).forEach(lt => {
+        if (!leadTagsMap[lt.lead_id]) leadTagsMap[lt.lead_id] = [];
+        leadTagsMap[lt.lead_id].push(lt.tag_id);
+      });
+      // Load custom values
+      const { data: cvData } = await sb.from('lead_custom_values').select('*');
+      leadCustomValues = {};
+      (cvData || []).forEach(cv => {
+        if (!leadCustomValues[cv.lead_id]) leadCustomValues[cv.lead_id] = {};
+        leadCustomValues[cv.lead_id][cv.field_id] = cv.value;
+      });
+      document.getElementById('leadCount').textContent = leads.length + ' leads';
+    }
+
+    async function loadTags() {
+      const { data } = await sb.from('tags').select('*').order('created_at');
+      allTags = data || [];
+    }
+
+    async function loadSources() {
+      const { data } = await sb.from('lead_sources').select('*').order('created_at');
+      allSources = data || [];
+    }
+
+    async function loadCustomFields() {
+      const { data } = await sb.from('custom_fields').select('*').order('position');
+      customFields = data || [];
+    }
+
+    // ─── TABS ─────────────────────────────────────
+    function switchTab(tab) {
+      const kBtn = document.getElementById('tabKanban');
+      const sBtn = document.getElementById('tabSettings');
+      const kView = document.getElementById('viewKanban');
+      const sView = document.getElementById('viewSettings');
+      if (tab === 'kanban') {
+        kBtn.className = kBtn.className.replace('tab-inactive','tab-active');
+        sBtn.className = sBtn.className.replace('tab-active','tab-inactive');
+        kView.classList.remove('hidden');
+        sView.classList.add('hidden');
+        renderKanban();
+      } else {
+        sBtn.className = sBtn.className.replace('tab-inactive','tab-active');
+        kBtn.className = kBtn.className.replace('tab-active','tab-inactive');
+        sView.classList.remove('hidden');
+        kView.classList.add('hidden');
+        renderSettingsTab();
+      }
+    }
+
+    let activeSettingsTab = 'cols';
+    function switchSettingsTab(tab) {
+      activeSettingsTab = tab;
+      document.querySelectorAll('[data-stab]').forEach(btn => {
+        btn.className = btn.className.replace(/stab-(active|inactive)/g, btn.dataset.stab === tab ? 'stab-active' : 'stab-inactive');
+      });
+      document.querySelectorAll('.settings-panel').forEach(p => p.classList.add('hidden'));
+      const map = { cols: 'settingsCols', fields: 'settingsFields', tags: 'settingsTags', sources: 'settingsSources', password: 'settingsPassword' };
+      document.getElementById(map[tab]).classList.remove('hidden');
+      renderSettingsTab();
+    }
+
+    function renderSettingsTab() {
+      if (activeSettingsTab === 'cols') renderColsSettings();
+      else if (activeSettingsTab === 'fields') renderFieldsSettings();
+      else if (activeSettingsTab === 'tags') renderTagsSettings();
+      else if (activeSettingsTab === 'sources') renderSourcesSettings();
+    }
+
+    // ─── KANBAN RENDERING ─────────────────────────
+    function getFilteredLeads() {
+      let filtered = [...leads];
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const tagFilter = document.getElementById('filterTag').value;
+      const srcFilter = document.getElementById('filterSource').value;
+      if (q) {
+        filtered = filtered.filter(l =>
+          (l.nome || '').toLowerCase().includes(q) ||
+          (l.sobrenome || '').toLowerCase().includes(q) ||
+          (l.email || '').toLowerCase().includes(q) ||
+          (l.telefone || '').toLowerCase().includes(q) ||
+          (l.instagram || '').toLowerCase().includes(q)
+        );
+      }
+      if (tagFilter) {
+        filtered = filtered.filter(l => (leadTagsMap[l.id] || []).includes(tagFilter));
+      }
+      if (srcFilter) {
+        filtered = filtered.filter(l => l.source_id === srcFilter);
+      }
+      return filtered;
+    }
+
+    function filterLeads() { renderKanban(); }
+
+    function renderFilterOptions() {
+      const tagSel = document.getElementById('filterTag');
+      const srcSel = document.getElementById('filterSource');
+      tagSel.innerHTML = '<option value="">Todas as tags</option>' + allTags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      srcSel.innerHTML = '<option value="">Todas as origens</option>' + allSources.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    function renderKanban() {
+      const container = document.getElementById('kanbanColumns');
+      container.innerHTML = '';
+      // Destroy previous sortable instances
+      sortableInstances.forEach(s => s.destroy());
+      sortableInstances = [];
+
+      const filtered = getFilteredLeads();
+
+      columns.forEach(col => {
+        const colLeads = filtered.filter(l => l.column_id === col.id);
+        const colEl = document.createElement('div');
+        colEl.className = 'kanban-column flex flex-col h-full shrink-0';
+        colEl.innerHTML = `
+          <div class="flex items-center gap-2 mb-3 px-1">
+            <div class="w-3 h-3 rounded-full shrink-0" style="background:${col.color}"></div>
+            <span class="text-sm font-semibold text-gray-300 truncate">${col.name}</span>
+            <span class="text-xs text-gray-600 ml-auto">${colLeads.length}</span>
+          </div>
+          <div class="kanban-cards flex-1 overflow-y-auto space-y-2 pb-4 min-h-[100px] rounded-lg p-2" data-column-id="${col.id}" style="background:rgba(26,26,26,0.5)">
+            ${colLeads.map(l => renderCard(l)).join('')}
+          </div>
+        `;
+        container.appendChild(colEl);
+
+        // Init sortable on each column's card container
+        const cardContainer = colEl.querySelector('.kanban-cards');
+        const sortable = new Sortable(cardContainer, {
+          group: 'kanban',
+          animation: 150,
+          ghostClass: 'sortable-ghost',
+          dragClass: 'sortable-drag',
+          onEnd: async (evt) => {
+            const leadId = evt.item.dataset.leadId;
+            const newColId = evt.to.dataset.columnId;
+            // Update in state
+            const lead = leads.find(l => l.id === leadId);
+            if (lead) lead.column_id = newColId;
+            // Update in Supabase
+            await sb.from('leads').update({ column_id: newColId }).eq('id', leadId);
+          }
+        });
+        sortableInstances.push(sortable);
+      });
+    }
+
+    function renderCard(lead) {
+      const tags = (leadTagsMap[lead.id] || []).map(tid => {
+        const tag = allTags.find(t => t.id === tid);
+        return tag ? `<span class="tag-pill" style="background:${tag.color}22;color:${tag.color}">${tag.name}</span>` : '';
+      }).join('');
+
+      const urgencyColor = (lead.urgencia || '').includes('Imediatamente') ? '#EF4444' :
+                           (lead.urgencia || '').includes('semanas') ? '#F59E0B' : '#6B7280';
+
+      return `
+        <div class="kanban-card bg-brand-dark border border-brand-gray rounded-lg p-3 cursor-pointer" data-lead-id="${lead.id}" onclick="openLeadModal('${lead.id}')">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <p class="text-sm font-semibold text-brand-white truncate">${lead.nome || ''} ${lead.sobrenome || ''}</p>
+            <div class="w-2 h-2 rounded-full shrink-0 mt-1.5" style="background:${urgencyColor}" title="${lead.urgencia || ''}"></div>
+          </div>
+          <p class="text-xs text-gray-500 truncate mb-2">${lead.telefone || lead.email || ''}</p>
+          ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
+        </div>
+      `;
+    }
+
+    // ─── LEAD MODAL ───────────────────────────────
+    function openLeadModal(leadId) {
+      currentLeadId = leadId;
+      const lead = leads.find(l => l.id === leadId);
+      if (!lead) return;
+
+      document.getElementById('m_nome').value = lead.nome || '';
+      document.getElementById('m_sobrenome').value = lead.sobrenome || '';
+      document.getElementById('m_email').value = lead.email || '';
+      document.getElementById('m_telefone').value = lead.telefone || '';
+      document.getElementById('m_instagram').value = lead.instagram || '';
+      document.getElementById('m_vendas').value = lead.vendas || '';
+      document.getElementById('m_margem').value = lead.margem || '';
+      document.getElementById('m_socios').value = lead.socios || '';
+      document.getElementById('m_urgencia').value = lead.urgencia || '';
+      document.getElementById('m_desafio').value = lead.desafio || '';
+      document.getElementById('m_notes').value = lead.notes || '';
+
+      // Source dropdown
+      const srcSel = document.getElementById('m_source');
+      srcSel.innerHTML = '<option value="">Selecionar...</option>' + allSources.map(s =>
+        `<option value="${s.id}" ${lead.source_id === s.id ? 'selected' : ''}>${s.name}</option>`
+      ).join('');
+
+      // WhatsApp link
+      const phone = (lead.telefone || '').replace(/\D/g, '');
+      const waLink = phone ? `https://api.whatsapp.com/send/?phone=55${phone}&text=Oi%20${encodeURIComponent(lead.nome || '')}%2C%20tudo%20bem%3F%20Sou%20da%20WP%20M%C3%ADdias.&type=phone_number&app_absent=0` : '#';
+      document.getElementById('modalWhatsApp').href = waLink;
+
+      // Tags
+      renderModalTags(leadId);
+
+      // Custom fields
+      renderModalCustomFields(leadId);
+
+      document.getElementById('leadModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function renderModalTags(leadId) {
+      const container = document.getElementById('modalTags');
+      const leadTags = leadTagsMap[leadId] || [];
+      container.innerHTML = allTags.map(tag => {
+        const active = leadTags.includes(tag.id);
+        return `<button onclick="toggleLeadTag('${leadId}','${tag.id}')" class="tag-pill cursor-pointer transition-opacity ${active ? '' : 'opacity-30'}" style="background:${tag.color}22;color:${tag.color};border:1px solid ${active ? tag.color : 'transparent'}">${tag.name}</button>`;
+      }).join('');
+    }
+
+    async function toggleLeadTag(leadId, tagId) {
+      if (!leadTagsMap[leadId]) leadTagsMap[leadId] = [];
+      const idx = leadTagsMap[leadId].indexOf(tagId);
+      if (idx >= 0) {
+        leadTagsMap[leadId].splice(idx, 1);
+        await sb.from('lead_tags').delete().eq('lead_id', leadId).eq('tag_id', tagId);
+      } else {
+        leadTagsMap[leadId].push(tagId);
+        await sb.from('lead_tags').insert({ lead_id: leadId, tag_id: tagId });
+      }
+      renderModalTags(leadId);
+      renderKanban();
+    }
+
+    function renderModalCustomFields(leadId) {
+      const container = document.getElementById('modalCustomFields');
+      if (customFields.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      const values = leadCustomValues[leadId] || {};
+      container.innerHTML = `
+        <h4 class="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Campos adicionais</h4>
+        <div class="grid grid-cols-2 gap-4">
+          ${customFields.map(f => {
+            const val = values[f.id] || '';
+            let input = '';
+            if (f.field_type === 'text') {
+              input = `<input type="text" class="crm-input" data-cf-id="${f.id}" value="${escHtml(val)}">`;
+            } else if (f.field_type === 'number') {
+              input = `<input type="number" class="crm-input" data-cf-id="${f.id}" value="${escHtml(val)}">`;
+            } else if (f.field_type === 'date') {
+              input = `<input type="date" class="crm-input" data-cf-id="${f.id}" value="${escHtml(val)}">`;
+            } else if (f.field_type === 'boolean') {
+              input = `<select class="crm-select" data-cf-id="${f.id}"><option value="">-</option><option value="Sim" ${val==='Sim'?'selected':''}>Sim</option><option value="Não" ${val==='Não'?'selected':''}>Não</option></select>`;
+            } else if (f.field_type === 'select') {
+              const opts = (f.options || []).map(o => `<option value="${escHtml(o)}" ${val===o?'selected':''}>${escHtml(o)}</option>`).join('');
+              input = `<select class="crm-select" data-cf-id="${f.id}"><option value="">Selecionar...</option>${opts}</select>`;
+            }
+            return `<div><label class="block text-xs text-gray-500 mb-1">${escHtml(f.name)}${f.required ? ' *' : ''}</label>${input}</div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function closeLeadModal() {
+      document.getElementById('leadModal').classList.add('hidden');
+      document.body.style.overflow = '';
+      currentLeadId = null;
+    }
+
+    async function saveLeadModal() {
+      if (!currentLeadId) return;
+      const leadId = currentLeadId;
+
+      // Update lead fields
+      const updates = {
+        nome: document.getElementById('m_nome').value,
+        sobrenome: document.getElementById('m_sobrenome').value,
+        email: document.getElementById('m_email').value,
+        telefone: document.getElementById('m_telefone').value,
+        instagram: document.getElementById('m_instagram').value,
+        notes: document.getElementById('m_notes').value,
+        source_id: document.getElementById('m_source').value || null,
+      };
+      await sb.from('leads').update(updates).eq('id', leadId);
+
+      // Update local state
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) Object.assign(lead, updates);
+
+      // Save custom field values
+      const cfInputs = document.querySelectorAll('[data-cf-id]');
+      for (const inp of cfInputs) {
+        const fieldId = inp.dataset.cfId;
+        const value = inp.value;
+        if (!leadCustomValues[leadId]) leadCustomValues[leadId] = {};
+        const oldVal = leadCustomValues[leadId][fieldId];
+        leadCustomValues[leadId][fieldId] = value;
+
+        if (oldVal !== undefined && oldVal !== null) {
+          await sb.from('lead_custom_values').update({ value, updated_at: new Date().toISOString() }).eq('lead_id', leadId).eq('field_id', fieldId);
+        } else if (value) {
+          await sb.from('lead_custom_values').insert({ lead_id: leadId, field_id: fieldId, value });
+        }
+      }
+
+      showToast('Lead salvo com sucesso', 'success');
+      renderKanban();
+      closeLeadModal();
+    }
+
+    // ─── SETTINGS: COLUMNS ────────────────────────
+    function renderColsSettings() {
+      const list = document.getElementById('colsList');
+      list.innerHTML = columns.map((col, i) => `
+        <div class="setting-item flex items-center gap-3 bg-brand-dark border border-brand-gray rounded-lg px-4 py-3" data-id="${col.id}">
+          <span class="drag-handle cursor-grab">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><circle cx="4" cy="3" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="4" cy="13" r="1.5"/><circle cx="10" cy="3" r="1.5"/><circle cx="10" cy="8" r="1.5"/><circle cx="10" cy="13" r="1.5"/></svg>
+          </span>
+          <div class="color-pick shrink-0" style="background:${col.color}">
+            <input type="color" value="${col.color}" onchange="updateColumn('${col.id}','color',this.value)">
+          </div>
+          <input type="text" class="crm-input flex-1" value="${escHtml(col.name)}" onchange="updateColumn('${col.id}','name',this.value)">
+          <button onclick="deleteColumn('${col.id}')" class="btn-danger">Deletar</button>
+        </div>
+      `).join('');
+
+      // Init sortable
+      if (list._sortable) list._sortable.destroy();
+      list._sortable = new Sortable(list, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd: async () => {
+          const items = list.querySelectorAll('[data-id]');
+          const updates = [];
+          items.forEach((item, i) => {
+            const id = item.dataset.id;
+            const col = columns.find(c => c.id === id);
+            if (col) col.position = i;
+            updates.push(sb.from('kanban_columns').update({ position: i }).eq('id', id));
+          });
+          columns.sort((a, b) => a.position - b.position);
+          await Promise.all(updates);
+        }
+      });
+    }
+
+    async function addColumn() {
+      const pos = columns.length;
+      const { data, error } = await sb.from('kanban_columns').insert({ name: 'Nova coluna', color: '#6B7280', position: pos }).select().single();
+      if (data) {
+        columns.push(data);
+        renderColsSettings();
+        showToast('Coluna adicionada', 'success');
+      }
+    }
+
+    async function updateColumn(id, field, value) {
+      await sb.from('kanban_columns').update({ [field]: value }).eq('id', id);
+      const col = columns.find(c => c.id === id);
+      if (col) col[field] = value;
+    }
+
+    async function deleteColumn(id) {
+      const col = columns.find(c => c.id === id);
+      showConfirm(`Deletar a coluna "${col?.name}"? Leads nela serão movidos para a primeira coluna.`, async () => {
+        const firstCol = columns.find(c => c.id !== id);
+        if (firstCol) {
+          await sb.from('leads').update({ column_id: firstCol.id }).eq('column_id', id);
+          leads.forEach(l => { if (l.column_id === id) l.column_id = firstCol.id; });
+        }
+        await sb.from('kanban_columns').delete().eq('id', id);
+        columns = columns.filter(c => c.id !== id);
+        renderColsSettings();
+        showToast('Coluna deletada', 'success');
+      });
+    }
+
+    // ─── SETTINGS: CUSTOM FIELDS ──────────────────
+    function renderFieldsSettings() {
+      const list = document.getElementById('fieldsList');
+      list.innerHTML = customFields.map(f => `
+        <div class="setting-item bg-brand-dark border border-brand-gray rounded-lg px-4 py-3" data-id="${f.id}">
+          <div class="flex items-center gap-3">
+            <span class="drag-handle cursor-grab">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><circle cx="4" cy="3" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="4" cy="13" r="1.5"/><circle cx="10" cy="3" r="1.5"/><circle cx="10" cy="8" r="1.5"/><circle cx="10" cy="13" r="1.5"/></svg>
+            </span>
+            <input type="text" class="crm-input flex-1" value="${escHtml(f.name)}" onchange="updateField('${f.id}','name',this.value)">
+            <select class="crm-select" style="width:130px" onchange="updateField('${f.id}','field_type',this.value); renderFieldsSettings()">
+              <option value="text" ${f.field_type==='text'?'selected':''}>Texto</option>
+              <option value="number" ${f.field_type==='number'?'selected':''}>Número</option>
+              <option value="date" ${f.field_type==='date'?'selected':''}>Data</option>
+              <option value="select" ${f.field_type==='select'?'selected':''}>Seleção</option>
+              <option value="boolean" ${f.field_type==='boolean'?'selected':''}>Sim/Não</option>
+            </select>
+            <div class="toggle ${f.required ? 'active' : ''}" onclick="updateField('${f.id}','required',!${f.required}); this.classList.toggle('active')" title="Obrigatório"></div>
+            <button onclick="deleteField('${f.id}')" class="btn-danger">Deletar</button>
+          </div>
+          ${f.field_type === 'select' ? renderFieldOptions(f) : ''}
+        </div>
+      `).join('');
+
+      if (list._sortable) list._sortable.destroy();
+      list._sortable = new Sortable(list, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        onEnd: async () => {
+          const items = list.querySelectorAll('[data-id]');
+          const updates = [];
+          items.forEach((item, i) => {
+            const id = item.dataset.id;
+            const f = customFields.find(x => x.id === id);
+            if (f) f.position = i;
+            updates.push(sb.from('custom_fields').update({ position: i }).eq('id', id));
+          });
+          customFields.sort((a, b) => a.position - b.position);
+          await Promise.all(updates);
+        }
+      });
+    }
+
+    function renderFieldOptions(field) {
+      const opts = field.options || [];
+      return `
+        <div class="mt-3 ml-8 space-y-2">
+          <p class="text-xs text-gray-500">Opções:</p>
+          ${opts.map((o, i) => `
+            <div class="flex items-center gap-2">
+              <input type="text" class="crm-input text-sm" value="${escHtml(o)}" onchange="updateFieldOption('${field.id}',${i},this.value)">
+              <button onclick="removeFieldOption('${field.id}',${i})" class="btn-danger text-xs">x</button>
+            </div>
+          `).join('')}
+          <button onclick="addFieldOption('${field.id}')" class="text-brand-orange text-xs font-semibold hover:underline">+ Adicionar opção</button>
+        </div>
+      `;
+    }
+
+    async function addCustomField() {
+      const pos = customFields.length;
+      const { data } = await sb.from('custom_fields').insert({ name: 'Novo campo', field_type: 'text', options: [], required: false, position: pos }).select().single();
+      if (data) {
+        customFields.push(data);
+        renderFieldsSettings();
+        showToast('Campo adicionado', 'success');
+      }
+    }
+
+    async function updateField(id, field, value) {
+      await sb.from('custom_fields').update({ [field]: value }).eq('id', id);
+      const f = customFields.find(x => x.id === id);
+      if (f) f[field] = value;
+    }
+
+    async function deleteField(id) {
+      const f = customFields.find(x => x.id === id);
+      showConfirm(`Deletar o campo "${f?.name}"? Todos os valores preenchidos serão perdidos.`, async () => {
+        await sb.from('lead_custom_values').delete().eq('field_id', id);
+        await sb.from('custom_fields').delete().eq('id', id);
+        customFields = customFields.filter(x => x.id !== id);
+        renderFieldsSettings();
+        showToast('Campo deletado', 'success');
+      });
+    }
+
+    async function addFieldOption(fieldId) {
+      const f = customFields.find(x => x.id === fieldId);
+      if (!f) return;
+      f.options = [...(f.options || []), 'Nova opção'];
+      await sb.from('custom_fields').update({ options: f.options }).eq('id', fieldId);
+      renderFieldsSettings();
+    }
+
+    async function updateFieldOption(fieldId, idx, value) {
+      const f = customFields.find(x => x.id === fieldId);
+      if (!f || !f.options) return;
+      f.options[idx] = value;
+      await sb.from('custom_fields').update({ options: f.options }).eq('id', fieldId);
+    }
+
+    async function removeFieldOption(fieldId, idx) {
+      const f = customFields.find(x => x.id === fieldId);
+      if (!f || !f.options) return;
+      f.options.splice(idx, 1);
+      await sb.from('custom_fields').update({ options: f.options }).eq('id', fieldId);
+      renderFieldsSettings();
+    }
+
+    // ─── SETTINGS: TAGS ───────────────────────────
+    function renderTagsSettings() {
+      const list = document.getElementById('tagsList');
+      list.innerHTML = allTags.map(t => `
+        <div class="setting-item flex items-center gap-3 bg-brand-dark border border-brand-gray rounded-lg px-4 py-3">
+          <div class="color-pick shrink-0" style="background:${t.color}">
+            <input type="color" value="${t.color}" onchange="updateTag('${t.id}','color',this.value)">
+          </div>
+          <input type="text" class="crm-input flex-1" value="${escHtml(t.name)}" onchange="updateTag('${t.id}','name',this.value)">
+          <span class="tag-pill" style="background:${t.color}22;color:${t.color}">${t.name}</span>
+          <button onclick="deleteTag('${t.id}')" class="btn-danger">Deletar</button>
+        </div>
+      `).join('');
+    }
+
+    async function addTag() {
+      const { data } = await sb.from('tags').insert({ name: 'Nova etiqueta', color: '#6B7280' }).select().single();
+      if (data) {
+        allTags.push(data);
+        renderTagsSettings();
+        showToast('Etiqueta adicionada', 'success');
+      }
+    }
+
+    async function updateTag(id, field, value) {
+      await sb.from('tags').update({ [field]: value }).eq('id', id);
+      const t = allTags.find(x => x.id === id);
+      if (t) t[field] = value;
+      if (field === 'color' || field === 'name') renderTagsSettings();
+    }
+
+    async function deleteTag(id) {
+      const t = allTags.find(x => x.id === id);
+      showConfirm(`Deletar a etiqueta "${t?.name}"?`, async () => {
+        await sb.from('lead_tags').delete().eq('tag_id', id);
+        await sb.from('tags').delete().eq('id', id);
+        allTags = allTags.filter(x => x.id !== id);
+        renderTagsSettings();
+        renderKanban();
+        showToast('Etiqueta deletada', 'success');
+      });
+    }
+
+    // ─── SETTINGS: SOURCES ────────────────────────
+    function renderSourcesSettings() {
+      const list = document.getElementById('sourcesList');
+      list.innerHTML = allSources.map(s => `
+        <div class="setting-item flex items-center gap-3 bg-brand-dark border border-brand-gray rounded-lg px-4 py-3">
+          <input type="text" class="crm-input flex-1" value="${escHtml(s.name)}" onchange="updateSource('${s.id}',this.value)">
+          <button onclick="deleteSource('${s.id}')" class="btn-danger">Deletar</button>
+        </div>
+      `).join('');
+    }
+
+    async function addSource() {
+      const { data } = await sb.from('lead_sources').insert({ name: 'Nova origem' }).select().single();
+      if (data) {
+        allSources.push(data);
+        renderSourcesSettings();
+        renderFilterOptions();
+        showToast('Origem adicionada', 'success');
+      }
+    }
+
+    async function updateSource(id, value) {
+      await sb.from('lead_sources').update({ name: value }).eq('id', id);
+      const s = allSources.find(x => x.id === id);
+      if (s) s.name = value;
+      renderFilterOptions();
+    }
+
+    async function deleteSource(id) {
+      const s = allSources.find(x => x.id === id);
+      showConfirm(`Deletar a origem "${s?.name}"?`, async () => {
+        await sb.from('leads').update({ source_id: null }).eq('source_id', id);
+        await sb.from('lead_sources').delete().eq('id', id);
+        allSources = allSources.filter(x => x.id !== id);
+        renderSourcesSettings();
+        renderFilterOptions();
+        showToast('Origem deletada', 'success');
+      });
+    }
+
+    // ─── SETTINGS: PASSWORD ───────────────────────
+    async function changePassword() {
+      const pw1 = document.getElementById('newPassword').value;
+      const pw2 = document.getElementById('confirmPassword').value;
+      const msg = document.getElementById('pwMsg');
+      msg.classList.remove('hidden');
+      if (!pw1 || pw1.length < 4) {
+        msg.textContent = 'Senha deve ter pelo menos 4 caracteres.';
+        msg.className = 'text-sm mt-3 text-red-400';
+        return;
+      }
+      if (pw1 !== pw2) {
+        msg.textContent = 'As senhas não coincidem.';
+        msg.className = 'text-sm mt-3 text-red-400';
+        return;
+      }
+      const hash = await hashPassword(pw1);
+      await sb.from('crm_settings').update({ value: hash }).eq('key', 'password_hash');
+      msg.textContent = 'Senha alterada com sucesso.';
+      msg.className = 'text-sm mt-3 text-green-400';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+    }
+
+    // ─── UTILITIES ────────────────────────────────
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+      icon.innerHTML = type === 'success' ? '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' : '<svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+      msg.textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function showConfirm(message, callback) {
+      document.getElementById('confirmMsg').textContent = message;
+      document.getElementById('confirmDialog').classList.remove('hidden');
+      confirmCallback = callback;
+    }
+
+    function cancelConfirm() {
+      document.getElementById('confirmDialog').classList.add('hidden');
+      confirmCallback = null;
+    }
+
+    async function doConfirm() {
+      document.getElementById('confirmDialog').classList.add('hidden');
+      if (confirmCallback) await confirmCallback();
+      confirmCallback = null;
+    }
+  </script>
+
+</body>
+</html>
